@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Trading Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: #12161f;
+            color: #e2e8f0;
+            user-select: none;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a202c;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d3748;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Navigation Header -->
+    <header class="h-14 bg-[#181e2a] border-b border-gray-800 flex items-center justify-between px-3 md:px-6">
+        <div class="flex items-center space-x-3">
+            <button class="text-gray-400 hover:text-white p-2 text-lg">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <div class="flex flex-col">
+                <div class="flex items-center space-x-2">
+                    <span class="bg-amber-500/20 text-amber-400 text-xs font-semibold px-1.5 py-0.5 rounded">Live</span>
+                    <span class="text-xs text-gray-400 hidden sm:inline">FX - PRACTICE 01</span>
+                </div>
+                <div class="flex items-center space-x-1">
+                    <span id="accountBalance" class="text-base font-bold text-white">27.87</span>
+                    <span class="text-xs text-gray-400 font-medium">USD</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs sm:text-sm px-4 py-2 rounded-lg transition duration-150 flex items-center space-x-2">
+                <i class="fa-solid fa-wallet text-xs"></i>
+                <span>Deposit</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Asset Bar & Toolbar -->
+    <div class="h-10 bg-[#141923] border-b border-gray-800/80 flex items-center justify-between px-3 overflow-x-auto text-xs">
+        <div class="flex items-center space-x-4 shrink-0">
+            <div class="flex items-center space-x-2 cursor-pointer bg-[#1e2638] px-2.5 py-1 rounded border border-gray-700/50">
+                <i class="fa-bold fa-bitcoin text-amber-500 text-sm"></i>
+                <span class="font-bold text-white">BTC / USD</span>
+                <i class="fa-solid fa-chevron-down text-[10px] text-gray-400"></i>
+            </div>
+            
+            <div class="h-4 w-px bg-gray-800"></div>
+
+            <div class="flex items-center space-x-2 text-gray-400">
+                <button class="hover:text-white px-1.5 py-0.5 rounded bg-gray-800/50 text-white">1m</button>
+                <button class="hover:text-white px-1.5 py-0.5 rounded">5m</button>
+                <button class="hover:text-white px-1.5 py-0.5 rounded">15m</button>
+                <button class="hover:text-white px-1.5 py-0.5 rounded">1h</button>
+            </div>
+
+            <div class="h-4 w-px bg-gray-800"></div>
+
+            <div class="flex items-center space-x-2 text-gray-400">
+                <button class="hover:text-white p-1"><i class="fa-solid fa-[#chart-candlestick]"></i> Candlesticks</button>
+                <button class="hover:text-white p-1"><i class="fa-solid fa-[#sliders]"></i> Indicators</button>
+            </div>
+        </div>
+
+        <div class="hidden sm:flex items-center space-x-3 text-gray-400 shrink-0">
+            <span id="utcClock" class="font-mono text-[11px]">16:24:33 UTC</span>
+        </div>
+    </div>
+
+    <!-- Main Chart & Trading Layout -->
+    <div class="flex-1 flex flex-col relative overflow-hidden">
+        
+        <!-- Live Price Floating Header -->
+        <div class="absolute top-3 left-4 z-10 bg-[#181e2a]/90 backdrop-blur border border-gray-800 p-2.5 rounded-lg flex items-center space-x-3">
+            <div>
+                <div class="flex items-center space-x-2">
+                    <span class="font-bold text-sm text-white">Bitcoin vs US Dollar</span>
+                    <span class="text-xs text-gray-400">· 1m</span>
+                </div>
+                <div class="flex items-center space-x-2 mt-0.5">
+                    <span id="headerLivePrice" class="text-lg font-bold text-emerald-400">84,774.39</span>
+                    <span id="priceChange" class="text-xs font-semibold text-emerald-500">+124.50 (+0.15%)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Candlestick Chart Canvas -->
+        <div id="chartContainer" class="flex-1 w-full h-full relative">
+            <canvas id="tradingChart" class="w-full h-full block"></canvas>
+        </div>
+
+        <!-- Sentiment Indicator Bar -->
+        <div class="h-6 bg-[#141923] border-t border-gray-800/80 px-4 flex items-center justify-between text-[11px] font-semibold">
+            <span class="text-red-400 flex items-center space-x-1">
+                <span>Sell</span>
+                <span id="sellPercent">47%</span>
+            </span>
+            <div class="flex-1 mx-3 h-1.5 bg-gray-800 rounded-full overflow-hidden flex">
+                <div id="sellBar" class="bg-red-500 h-full transition-all duration-300" style="width: 47%"></div>
+                <div id="buyBar" class="bg-blue-500 h-full transition-all duration-300" style="width: 53%"></div>
+            </div>
+            <span class="text-blue-400 flex items-center space-x-1">
+                <span id="buyPercent">53%</span>
+                <span>Buy</span>
+            </span>
+        </div>
+
+        <!-- Bottom Execution Panel -->
+        <div class="bg-[#181e2a] border-t border-gray-800 p-3 sm:p-4">
+            <div class="max-w-4xl mx-auto flex flex-col space-y-3">
+                
+                <!-- Order Size Selector -->
+                <div class="flex items-center justify-between bg-[#12161f] px-3 py-1.5 rounded-lg border border-gray-800">
+                    <span class="text-xs text-gray-400 font-medium">Trade Amount</span>
+                    <div class="flex items-center space-x-2">
+                        <button id="btnDecrease" class="w-6 h-6 bg-gray-800 hover:bg-gray-700 rounded text-xs text-white font-bold flex items-center justify-center">-</button>
+                        <input type="text" id="tradeAmount" value="10.00 USD" class="bg-transparent text-center text-sm font-bold text-white w-24 outline-none">
+                        <button id="btnIncrease" class="w-6 h-6 bg-gray-800 hover:bg-gray-700 rounded text-xs text-white font-bold flex items-center justify-center">+</button>
+                    </div>
+                </div>
+
+                <!-- Buy / Sell Action Buttons -->
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- Sell Button -->
+                    <button id="btnSell" class="bg-red-600/90 hover:bg-red-600 active:scale-[0.99] text-white p-3 rounded-xl flex flex-col items-center justify-center shadow-lg shadow-red-950/20 transition duration-150">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-red-200 font-semibold uppercase tracking-wider">Sell</span>
+                            <i class="fa-solid fa-arrow-down text-xs"></i>
+                        </div>
+                        <span id="bidPrice" class="text-base sm:text-lg font-black tracking-tight mt-0.5">84,774.39</span>
+                    </button>
+
+                    <!-- Buy Button -->
+                    <button id="btnBuy" class="bg-blue-600/90 hover:bg-blue-600 active:scale-[0.99] text-white p-3 rounded-xl flex flex-col items-center justify-center shadow-lg shadow-blue-950/20 transition duration-150">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-blue-200 font-semibold uppercase tracking-wider">Buy</span>
+                            <i class="fa-solid fa-arrow-up text-xs"></i>
+                        </div>
+                        <span id="askPrice" class="text-base sm:text-lg font-black tracking-tight mt-0.5">84,784.39</span>
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Simulation Logic JavaScript -->
+    <script>
+        // Canvas and Chart Setup
+        const canvas = document.getElementById('tradingChart');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('chartContainer');
+
+        let width = canvas.width = container.clientWidth;
+        let height = canvas.height = container.clientHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = container.clientWidth;
+            height = canvas.height = container.clientHeight;
+            drawChart();
+        });
+
+        // Initial Simulated Data
+        let basePrice = 84774.39;
+        let candles = [];
+        const maxCandles = 40;
+
+        // Generate initial candles
+        function initCandles() {
+            let currentPrice = 84820.00;
+            for (let i = 0; i < maxCandles; i++) {
+                let open = currentPrice;
+                let change = (Math.random() - 0.49) * 25;
+                let close = open + change;
+                let high = Math.max(open, close) + Math.random() * 12;
+                let low = Math.min(open, close) - Math.random() * 12;
+
+                candles.push({ open, high, low, close });
+                currentPrice = close;
+            }
+            basePrice = currentPrice;
+        }
+
+        initCandles();
+
+        // Real-Time Price Update Loop
+        function updateData() {
+            let lastCandle = candles[candles.length - 1];
+            let priceDelta = (Math.random() - 0.485) * 4.5;
+            
+            lastCandle.close += priceDelta;
+            if (lastCandle.close > lastCandle.high) lastCandle.high = lastCandle.close;
+            if (lastCandle.close < lastCandle.low) lastCandle.low = lastCandle.close;
+
+            basePrice = lastCandle.close;
+
+            // Occasionally create a new candle
+            if (Math.random() < 0.15) {
+                candles.shift();
+                candles.push({
+                    open: basePrice,
+                    high: basePrice,
+                    low: basePrice,
+                    close: basePrice
+                });
+            }
+
+            // Update DOM Elements
+            const formattedPrice = basePrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const formattedAsk = (basePrice + 10.00).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+            document.getElementById('headerLivePrice').innerText = formattedPrice;
+            document.getElementById('bidPrice').innerText = formattedPrice;
+            document.getElementById('askPrice').innerText = formattedAsk;
+
+            // Header price color shift
+            const livePriceEl = document.getElementById('headerLivePrice');
+            if (priceDelta >= 0) {
+                livePriceEl.className = "text-lg font-bold text-emerald-400";
+            } else {
+                livePriceEl.className = "text-lg font-bold text-rose-500";
+            }
+
+            // Random Sentiment Shift
+            if (Math.random() < 0.08) {
+                let sellVal = Math.floor(Math.random() * 20) + 40;
+                let buyVal = 100 - sellVal;
+                document.getElementById('sellPercent').innerText = sellVal + '%';
+                document.getElementById('buyPercent').innerText = buyVal + '%';
+                document.getElementById('sellBar').style.width = sellVal + '%';
+                document.getElementById('buyBar').style.width = buyVal + '%';
+            }
+
+            drawChart();
+        }
+
+        // Render Candlestick Chart
+        function drawChart() {
+            ctx.clearRect(0, 0, width, height);
+
+            // Chart Bounds
+            let minPrice = Infinity;
+            let maxPrice = -Infinity;
+
+            candles.forEach(c => {
+                if (c.low < minPrice) minPrice = c.low;
+                if (c.high > maxPrice) maxPrice = c.high;
+            });
+
+            const padding = 20;
+            const priceRange = maxPrice - minPrice || 1;
+            const candleWidth = (width - 70) / maxCandles;
+
+            // Draw Background Horizontal Gridlines & Price Scale
+            ctx.strokeStyle = '#1e2638';
+            ctx.fillStyle = '#64748b';
+            ctx.font = '10px Inter, sans-serif';
+            ctx.lineWidth = 1;
+
+            const gridRows = 6;
+            for (let i = 0; i <= gridRows; i++) {
+                let y = padding + (height - 2 * padding) * (i / gridRows);
+                let priceVal = maxPrice - (priceRange * (i / gridRows));
+
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(width - 60, y);
+                ctx.stroke();
+
+                ctx.fillText(priceVal.toFixed(2), width - 55, y + 3);
+            }
+
+            // Draw Candlesticks
+            candles.forEach((c, index) => {
+                let x = index * candleWidth + 10;
+                let isGreen = c.close >= c.open;
+
+                let yOpen = height - padding - ((c.open - minPrice) / priceRange) * (height - 2 * padding);
+                let yClose = height - padding - ((c.close - minPrice) / priceRange) * (height - 2 * padding);
+                let yHigh = height - padding - ((c.high - minPrice) / priceRange) * (height - 2 * padding);
+                let yLow = height - padding - ((c.low - minPrice) / priceRange) * (height - 2 * padding);
+
+                // Draw Wick
+                ctx.strokeStyle = isGreen ? '#22c55e' : '#ef4444';
+                ctx.beginPath();
+                ctx.moveTo(x + candleWidth / 2, yHigh);
+                ctx.lineTo(x + candleWidth / 2, yLow);
+                ctx.stroke();
+
+                // Draw Candle Body
+                ctx.fillStyle = isGreen ? '#22c55e' : '#ef4444';
+                let bodyHeight = Math.max(Math.abs(yClose - yOpen), 2);
+                let bodyY = Math.min(yOpen, yClose);
+                ctx.fillRect(x + 2, bodyY, candleWidth - 4, bodyHeight);
+            });
+
+            // Draw Current Price Line
+            let lastCandle = candles[candles.length - 1];
+            let currentY = height - padding - ((lastCandle.close - minPrice) / priceRange) * (height - 2 * padding);
+            
+            ctx.strokeStyle = '#ef4444';
+            ctx.setLineDash([3, 3]);
+            ctx.beginPath();
+            ctx.moveTo(0, currentY);
+            ctx.lineTo(width - 60, currentY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Current Price Tag
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(width - 60, currentY - 10, 58, 20);
+            ctx.fillStyle = '#ffffff';
+            ctx.fontWeight = 'bold';
+            ctx.fillText(lastCandle.close.toFixed(2), width - 55, currentY + 3);
+        }
+
+        // UTC Clock Update
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('utcClock').innerText = now.toUTCString().split(' ')[4] + ' UTC';
+        }
+        setInterval(updateClock, 1000);
+
+        // Trade Amount Button Controls
+        let currentAmount = 10.00;
+        document.getElementById('btnIncrease').addEventListener('click', () => {
+            currentAmount += 5;
+            document.getElementById('tradeAmount').value = currentAmount.toFixed(2) + ' USD';
+        });
+
+        document.getElementById('btnDecrease').addEventListener('click', () => {
+            if (currentAmount > 5) currentAmount -= 5;
+            document.getElementById('tradeAmount').value = currentAmount.toFixed(2) + ' USD';
+        });
+
+        // Interactive Trade Execution Demo
+        function executeTrade(type) {
+            let balanceEl = document.getElementById('accountBalance');
+            let balance = parseFloat(balanceEl.innerText);
+
+            if (balance >= currentAmount) {
+                balance -= currentAmount;
+                balanceEl.innerText = balance.toFixed(2);
+
+                // Flash feedback on button
+                let btn = type === 'BUY' ? document.getElementById('btnBuy') : document.getElementById('btnSell');
+                let originalBg = btn.className;
+                btn.classList.add('brightness-125', 'scale-[0.98]');
+                setTimeout(() => {
+                    btn.className = originalBg;
+                }, 150);
+            }
+        }
+
+        document.getElementById('btnBuy').addEventListener('click', () => executeTrade('BUY'));
+        document.getElementById('btnSell').addEventListener('click', () => executeTrade('SELL'));
+
+        // Start Data Loop
+        setInterval(updateData, 700);
+        drawChart();
+    </script>
+</body>
+</html>
